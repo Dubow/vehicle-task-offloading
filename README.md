@@ -13,13 +13,23 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Run the checks, train three models, evaluate, and demonstrate a saved model:
+To try a supplied trained model immediately, run:
+
+```powershell
+.\.venv\Scripts\python.exe demo.py --model models/dqn_seed_7.pt --tasks 10
+```
+
+The table shows each task's inputs, selected destination, simulated completion
+delay, deadline outcome, and reward. The default 10-task demonstration with
+this checkpoint meets 9 deadlines; the benchmark below uses 3,000 tasks per
+policy and provides the broader comparison. No retraining is needed for the demo.
+
+To run the checks and reproduce the complete training and evaluation workflow:
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 .\.venv\Scripts\python.exe train.py --episodes 500 --seeds 7 17 27
 .\.venv\Scripts\python.exe evaluate.py --episodes 30
-.\.venv\Scripts\python.exe demo.py --model models/dqn_seed_7.pt --tasks 10
 ```
 
 Training uses the CPU (Central Processing Unit). The scripts locate their outputs relative to the project, so launching them from PyCharm also works. A new run using the same output location replaces that run's generated files; use the output-directory options to preserve separate experiments.
@@ -66,11 +76,37 @@ Experience replay stores past transitions. A periodically synchronized target ne
 
 ## Experiment outputs
 
+The supplied models were trained for 500 episodes each with three different
+random seeds. Each policy was evaluated on the same 30 held-out episodes of
+100 tasks. See [the full summary](results/summary.csv) for unrounded values
+and episode variability.
+
+| Policy | Mean delay (seconds) | Deadlines met |
+|---|---:|---:|
+| Local | 49.156 | 0.9% |
+| Edge | 2.308 | 20.5% |
+| Cloud | 0.509 | 74.3% |
+| Random | 4.303 | 54.6% |
+| Greedy | 0.354 | 88.4% |
+| DQN (Deep Q-Network), seed 7 | 0.332 | 90.5% |
+| DQN (Deep Q-Network), seed 17 | 0.331 | 90.8% |
+| DQN (Deep Q-Network), seed 27 | 0.332 | 90.9% |
+
+![Deadline success for the five baseline policies and three trained networks](results/figures/deadline_success.png)
+
+All three models are reported rather than selecting one using test results.
+The comparison holds for the documented synthetic workload and fixed system
+settings; it does not establish performance on real vehicles or other workloads.
+
 - `models/`: saved networks and settings for each training seed.
 - `results/training_seed_*.csv`: per-episode training and validation records.
 - `results/evaluation_results.csv`: per-policy, per-test-episode measurements.
 - `results/summary.csv`: descriptive policy comparisons.
 - `results/figures/`: plots for inspection, reports, and presentations.
+
+The [model guide](models/README.md) explains checkpoint contents and loading.
+The [results guide](results/README.md) explains table columns, figures, and the
+distinction between demonstration, validation, and test outcomes.
 
 Training traces use each training seed's designated stream. Validation uses seeds 1000000 through 1000009. Final evaluation begins at seed 2000000. The example using seed 42 is a learning exercise, not the final evaluation.
 
