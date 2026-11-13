@@ -1,3 +1,5 @@
+"""Expose task traces as finite reinforcement-learning episodes."""
+
 from math import log1p
 
 import numpy as np
@@ -6,6 +8,9 @@ from environment import OffloadingEnvironment
 
 
 class LearningEnvironment:
+    """Adapt the simulator to observations, integer actions, and scalar rewards."""
+
+    # Output positions in the value network use this same destination order.
     ACTIONS = ("Local", "Edge", "Cloud")
 
     def __init__(self, tasks, arrival_gap_s=0.2):
@@ -24,11 +29,20 @@ class LearningEnvironment:
         return self.observation()
 
     def observation(self):
+        """Return eight features in the order expected by the value network.
+
+        The first four are data (megabits), work (billions of processor cycles),
+        deadline (seconds), and uplink (megabits per second), divided by their
+        default task-generator maxima. Next are log(1 + reserved seconds) for
+        Local, Edge, and Cloud; the last is the fraction of tasks still to decide.
+        Scaling does not clip custom inputs. A terminal observation is all zeros.
+        """
         if self.index >= len(self.tasks):
             return np.zeros(8, dtype=np.float32)
 
         task = self.tasks[self.index]
 
+        # Reservations are measured from this task's arrival, before its upload.
         reserved_times = [
             max(
                 0.0,
@@ -50,6 +64,7 @@ class LearningEnvironment:
         ], dtype=np.float32)
 
     def step(self, action):
+        """Assign one task and return the next observation, reward, done, and details."""
         if self.index >= len(self.tasks):
             raise RuntimeError("Episode finished. Call reset() first.")
 
@@ -68,8 +83,10 @@ class LearningEnvironment:
         )
 
         delay = result["delay_s"]
+        # Allow a one-nanosecond tolerance at the deadline boundary.
         deadline_met = delay <= task["deadline_s"] + 1e-9
 
+        # Delay costs one reward unit per second; a missed deadline costs one more.
         reward = -(delay / 1.0) - (
             0.0 if deadline_met else 1.0
         )
