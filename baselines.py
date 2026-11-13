@@ -1,3 +1,9 @@
+"""Generate reproducible synthetic tasks and compare five reference policies.
+
+Local, Edge, and Cloud always use their named destination. Random samples a
+destination uniformly; Greedy chooses the smallest estimated current delay.
+"""
+
 from copy import deepcopy
 from random import Random
 from statistics import mean
@@ -8,6 +14,12 @@ ACTIONS = ("Local", "Edge", "Cloud")
 
 
 def generate_tasks(count=100, seed=42):
+    """Return repeatable task inputs; deadlines are relative to task arrival.
+
+    Sizes use megabits, work uses billions of cycles, and upload rates use
+    megabits per second. A private random generator isolates the task sequence
+    from policy exploration and other random operations elsewhere in Python.
+    """
     rng = Random(seed)
     tasks = []
 
@@ -25,6 +37,12 @@ def generate_tasks(count=100, seed=42):
 
 
 def choose_action(policy, environment, task, rng):
+    """Select a destination without modifying the real simulation state.
+
+    The caller sets the current upload rate before Greedy previews each action
+    on a copy. Greedy optimizes this task's delay, not future queue congestion
+    or the explicit deadline penalty used by the learning agent.
+    """
     if policy in ACTIONS:
         return policy
 
@@ -52,6 +70,11 @@ def choose_action(policy, environment, task, rng):
 
 
 def evaluate_policy(policy, tasks):
+    """Return mean delay, deadline-success percentage, and destination counts.
+
+    Every policy starts with empty queues and processes the provided inputs in
+    order. The standalone seed-42 example is separate from final evaluation.
+    """
     environment = OffloadingEnvironment(arrival_gap_s=0.2)
     rng = Random(7)
 

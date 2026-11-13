@@ -1,3 +1,10 @@
+"""Calculate transfer, waiting, and processing delays on three destinations.
+
+This is a numerical simulation: it reserves future processing slots instead of
+sleeping or sending data to real servers. Each call dispatches one whole task.
+"""
+
+
 class OffloadingEnvironment:
     def __init__(self, uplink_mbps=20.0, arrival_gap_s=0.1):
         if uplink_mbps <= 0 or arrival_gap_s <= 0:
@@ -6,7 +13,7 @@ class OffloadingEnvironment:
         self.uplink_mbps = uplink_mbps
         self.arrival_gap_s = arrival_gap_s
 
-        # Computing speeds: billions of CPU cycles per second.
+        # Computing speeds: billions of CPU (Central Processing Unit) cycles/s.
         self.cpu_rates = {
             "Local": 1.0,
             "Edge": 5.0,
@@ -23,12 +30,20 @@ class OffloadingEnvironment:
         self.reset()
 
     def reset(self):
+        """Return the simulated clock and all destination reservations to zero."""
         self.time_s = 0.0
         self.server_free_at = {
             name: 0.0 for name in self.cpu_rates
         }
 
     def step(self, action, data_mbits=1.0, work_gcycles=1.0):
+        """Reserve processing in dispatch order and return delays in seconds.
+
+        Input data is measured in megabits and work in billions of cycles.
+        Queue time starts after transfer; total delay includes transfer, queue
+        time, and computation. The clock advances by the arrival interval, not
+        by completion time, so later tasks can arrive while work is pending.
+        """
         if action not in self.cpu_rates:
             raise ValueError("Choose Local, Edge, or Cloud.")
 

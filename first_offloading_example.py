@@ -1,6 +1,14 @@
+"""Illustrate how upload speed changes a single task's fastest destination.
+
+This introductory calculation has no queues or learning. Its fixed task and
+network overheads differ from the later multi-task experiment settings.
+"""
+
+
 def estimate_delays(uplink_mbps):
-    task_mbits = 8.0       # 1 MB of input data
-    task_gcycles = 1.0     # 1 billion CPU cycles of work
+    """Return delays in seconds for an upload rate in megabits per second."""
+    task_mbits = 8.0       # 1 MB (megabyte) = 8 megabits of input data.
+    task_gcycles = 1.0     # 1 billion CPU (Central Processing Unit) cycles.
 
     upload_seconds = task_mbits / uplink_mbps
 
