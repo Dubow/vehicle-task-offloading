@@ -1,4 +1,8 @@
-"""Deterministic checks of the simulator and DQN (Deep Q-Network) learning."""
+"""Deterministic contracts for the simulator adapter and DQN (Deep Q-Network).
+
+These checks establish transition and update correctness, not policy convergence
+or superiority over the baselines.
+"""
 import copy
 from pathlib import Path
 from random import Random
@@ -19,6 +23,7 @@ class EnvironmentTests(unittest.TestCase):
                          deadline_s=0.4, uplink_mbps=20.0)
 
     def test_observations_rewards_and_terminal(self):
+        """Check queue features, delay penalties, terminal zeros, and reset behavior."""
         env = LearningEnvironment([self.task, self.task])
         initial = env.reset()
         state, reward, done, info = env.step(1)
@@ -36,12 +41,14 @@ class EnvironmentTests(unittest.TestCase):
         np.testing.assert_array_equal(env.reset(), initial)
 
     def test_deadline_boundary(self):
+        """A task finishing exactly at its deadline receives no miss penalty."""
         task = {**self.task, 'deadline_s': 0.25}
         _, reward, _, info = LearningEnvironment([task]).step(1)
         self.assertTrue(info['deadline_met'])
         self.assertEqual(reward, -0.25)
 
     def test_wrapper_matches_all_original_baselines(self):
+        """Match baseline metrics and action counts without mutating inputs or preview state."""
         tasks = generate_tasks(seed=42)
         original = copy.deepcopy(tasks)
         for policy in (*ACTIONS, 'Random', 'Greedy'):
@@ -74,6 +81,11 @@ class AgentTests(unittest.TestCase):
         })
 
     def configured_loss(self, done):
+        """Make targets analytically known; check online updates and gradient-free targets.
+
+        Predicted values start at zero: terminal targets are -2, while continuing
+        targets are -2 + 0.9 * 10 = 7. Smooth L1 losses are therefore 1.5 and 6.5.
+        """
         agent = self.make_agent()
         with torch.no_grad():
             for parameter in agent.network.parameters():
@@ -97,6 +109,7 @@ class AgentTests(unittest.TestCase):
         self.assertAlmostEqual(self.configured_loss(False), 6.5, places=5)
 
     def test_replay_copies_observations(self):
+        """Later caller mutations must not alter either state saved in replay."""
         agent = self.make_agent()
         state = np.ones(8, dtype=np.float32)
         agent.remember(state, 1, -0.2, state, False)
@@ -105,6 +118,7 @@ class AgentTests(unittest.TestCase):
         np.testing.assert_array_equal(agent.memory[0][3], np.ones(8))
 
     def test_checkpoint_round_trip(self):
+        """Serialization preserves exact action values, greedy choice, and metadata."""
         agent = self.make_agent()
         state = np.arange(8, dtype=np.float32) / 8
         tensor = torch.as_tensor(state).unsqueeze(0)
