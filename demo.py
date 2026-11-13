@@ -1,4 +1,10 @@
-"""Demonstrate a saved DQN (Deep Q-Network) without retraining it."""
+"""Demonstrate a saved DQN (Deep Q-Network) without retraining it.
+
+The default demonstration seed is separate from training, validation, and the
+reported final test. Specify --model for a particular checkpoint; otherwise
+the first filename in sorted order is used. The short trace is for explaining
+decisions, not for replacing the larger benchmark in evaluate.py.
+"""
 
 import argparse
 from pathlib import Path
@@ -43,6 +49,8 @@ def main():
     print("Task | Input Mb | Work Gcycles | Link Mbps | Deadline s | Choice | Delay s | Met? | Reward")
 
     for task_id, task in enumerate(tasks, start=1):
+        # Zero exploration selects the largest learned action-value estimate.
+        # Only the simulator changes here; the network receives no updates.
         action = agent.select_action(observation, epsilon=0.0)
         observation, reward, done, info = environment.step(action)
         delays.append(info["delay_s"])

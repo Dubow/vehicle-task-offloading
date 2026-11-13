@@ -1,4 +1,9 @@
-"""Compare frozen DQN (Deep Q-Network) models with five baseline policies."""
+"""Compare frozen DQN (Deep Q-Network) models with five baseline policies.
+
+Each policy receives the same held-out task sequences and its own empty queues.
+All supplied checkpoints are reported: final-test outcomes do not select a
+winning model. Tables and figures describe this synthetic simulation only.
+"""
 
 import argparse
 import csv
@@ -73,6 +78,12 @@ def evaluate_episode(policy, tasks, test_seed, agent=None):
 
 
 def summarize(rows):
+    """Aggregate episode means separately for every policy or trained model.
+
+    Standard deviations describe variation across test episodes, not across
+    training seeds. Since each episode has 100 tasks, averaging episode means
+    also gives the mean across all evaluated tasks for that policy.
+    """
     summaries = []
     for policy in dict.fromkeys(row["policy"] for row in rows):
         selected = [row for row in rows if row["policy"] == policy]
@@ -101,6 +112,12 @@ def summarize(rows):
 
 
 def make_figures(summaries, output_dir):
+    """Plot delay, deadline success, destination shares, and training reward.
+
+    Delay uses a logarithmic axis to keep both overloaded and faster policies
+    visible. Training reward includes exploratory actions; it is a diagnostic
+    curve, whereas the separate test tables use exploration-free decisions.
+    """
     figures = output_dir / "figures"
     figures.mkdir(parents=True, exist_ok=True)
     labels = [row["policy"] for row in summaries]
