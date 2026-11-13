@@ -1,3 +1,6 @@
+# Exact package versions recorded from the Python 3.12 experiment environment.
+# Includes transitive dependencies to document the environment used for results.
+# PyTorch uses the CPU (Central Processing Unit) build; no graphics card is required.
 --extra-index-url https://download.pytorch.org/whl/cpu
 contourpy==1.4.0
 cycler==0.12.1
