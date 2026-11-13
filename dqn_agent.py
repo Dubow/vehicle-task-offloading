@@ -1,4 +1,4 @@
-"""DQN [Deep Q-Network] with replay and a frozen target network."""
+"""DQN (Deep Q-Network) with uniform replay and a frozen target network."""
 
 from collections import deque
 from copy import deepcopy
@@ -15,6 +15,8 @@ from config import CONFIG
 
 
 class QNetwork(nn.Module):
+    """Map an observation to one discounted-return estimate per action."""
+
     def __init__(self, observation_size=8, action_count=3, hidden_size=64):
         super().__init__()
 
@@ -31,6 +33,8 @@ class QNetwork(nn.Module):
 
 
 class DQNAgent:
+    """Train action values with replay, a Smooth L1 loss, and hard target copies."""
+
     def __init__(self, seed=7, settings=None):
         self.settings = deepcopy(CONFIG)
         if settings is not None:
@@ -58,6 +62,7 @@ class DQNAgent:
 
         torch.set_num_threads(self.settings["torch_threads"])
         torch.manual_seed(self.seed)
+        # Separate streams keep exploration choices independent of replay sampling.
         self.action_rng = Random(self.seed)
         self.replay_rng = Random(self.seed + 1)
         self.network = QNetwork(
@@ -86,6 +91,7 @@ class DQNAgent:
         return array
 
     def select_action(self, obs, epsilon=0.0):
+        """Explore with probability epsilon; otherwise choose the highest value."""
         if not 0.0 <= epsilon <= 1.0:
             raise ValueError("epsilon must be between zero and one.")
         array = self._observation_array(obs)
@@ -98,6 +104,7 @@ class DQNAgent:
         return int(values.argmax(dim=1).item())
 
     def remember(self, state, action, reward, next_state, done):
+        """Store one copied transition and advance the environment-step counter."""
         if not isinstance(action, (int, np.integer)) or not 0 <= action < self.settings["action_count"]:
             raise ValueError("Action index is outside the available actions.")
         reward = float(reward)
@@ -111,12 +118,18 @@ class DQNAgent:
         self.environment_steps += 1
 
     def learn(self):
+        """Update once per eligible transition count, or return None when skipped.
+
+        Warmup requires enough stored transitions. The training cadence counts
+        transitions, while target synchronization counts completed optimizer steps.
+        """
         if len(self.memory) < max(
             self.settings["batch_size"], self.settings["warmup_steps"]
         ):
             return None
         if self.environment_steps % self.settings["train_every"] != 0:
             return None
+        # Repeated calls without new experience must not duplicate an update.
         if self.environment_steps == self._last_learning_step:
             return None
 
@@ -131,6 +144,7 @@ class DQNAgent:
         self.network.train()
         predicted_values = self.network(states).gather(1, actions).squeeze(1)
         with torch.no_grad():
+            # Standard DQN: the frozen network both selects and values the next action.
             next_values = self.target_network(next_states).max(dim=1).values
             # A completed finite episode has no future reward to bootstrap.
             next_values = next_values.masked_fill(dones, 0.0)
@@ -151,7 +165,13 @@ class DQNAgent:
         return float(loss.item())
 
     def save(self, path, metadata=None):
-        """Save portable inference weights, settings, and primitive metadata."""
+        """Save inference weights, settings, seed, and serializable metadata.
+
+        Metadata must support JSON (JavaScript Object Notation) serialization.
+
+        A sibling temporary file is written before replacing the destination.
+        Replay, optimizer state, and training counters are intentionally omitted.
+        """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         self.metadata = json.loads(json.dumps(

@@ -1,4 +1,4 @@
-"""Train DQN [Deep Q-Network] models, selected using validation traces."""
+"""Train DQN (Deep Q-Network) models, selected using fixed validation traces."""
 
 import argparse
 from copy import deepcopy
@@ -20,7 +20,12 @@ from rl_environment import LearningEnvironment
 
 
 def validate(agent, settings):
-    """Measure frozen behavior without exploration, replay, or updates."""
+    """Evaluate network-selected actions on fixed traces at every checkpoint.
+
+    Choose the network's highest-valued action, with no random exploration.
+    Reward is the mean episode return; delay and deadline success aggregate all
+    tasks. Evaluation neither stores replay transitions nor updates the network.
+    """
     returns, delays, deadlines_met = [], [], 0
     for task_seed in settings["validation_seeds"]:
         environment = LearningEnvironment(
@@ -45,12 +50,14 @@ def validate(agent, settings):
 
 
 def exploration_probability(episode, settings):
+    """Linearly decay epsilon by one-based episode, then hold the final value."""
     intervals = max(1, ceil(settings["episodes"] * settings["epsilon_decay_fraction"]) - 1)
     progress = min(1.0, (episode - 1) / intervals)
     return settings["epsilon_start"] + progress * (settings["epsilon_end"] - settings["epsilon_start"])
 
 
 def train_seed(seed, settings, output_dir):
+    """Train one seeded agent and retain its best validation-reward checkpoint."""
     models_dir, results_dir = output_dir / "models", output_dir / "results"
     models_dir.mkdir(parents=True, exist_ok=True)
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -81,6 +88,7 @@ def train_seed(seed, settings, output_dir):
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         for episode in range(1, settings["episodes"] + 1):
+            # Every episode gets a deterministic trace from this seed's reserved block.
             task_seed = seed * settings["training_seed_stride"] + episode
             environment = LearningEnvironment(
                 generate_tasks(count=settings["tasks_per_episode"], seed=task_seed),
@@ -102,18 +110,21 @@ def train_seed(seed, settings, output_dir):
                 episode_reward += reward
                 delays.append(info["delay_s"])
                 deadlines_met += int(info["deadline_met"])
+            # A blank loss means this episode produced no optimizer updates.
             row = {
                 "episode": episode, "reward": episode_reward, "mean_delay_s": mean(delays),
                 "deadline_success_pct": 100.0 * deadlines_met / len(delays), "epsilon": epsilon,
                 "loss": mean(losses) if losses else "", "validation_reward": "",
                 "validation_mean_delay_s": "", "validation_deadline_success_pct": "",
             }
+            # Always assess the final episode, even with a partial validation interval.
             should_validate = episode % settings["validation_interval"] == 0 or episode == settings["episodes"]
             if should_validate:
                 validation = validate(agent, settings)
                 row.update({"validation_reward": validation["reward"],
                             "validation_mean_delay_s": validation["mean_delay_s"],
                             "validation_deadline_success_pct": validation["deadline_success_pct"]})
+                # Strict improvement preserves the earlier checkpoint when rewards tie.
                 if validation["reward"] > best_validation_reward:
                     best_validation_reward = validation["reward"]
                     best_metadata = {
@@ -152,6 +163,7 @@ def main():
         parser.error("episodes must be between 1 and 10000 to preserve separate training traces.")
     if len(set(args.seeds)) != len(args.seeds) or any(seed < 0 for seed in args.seeds):
         parser.error("seeds must be distinct non-negative integers.")
+    # Reject overlap before writing outputs so model selection and testing stay separate.
     for seed in args.seeds:
         first = seed * CONFIG["training_seed_stride"] + 1
         last = first + args.episodes - 1
