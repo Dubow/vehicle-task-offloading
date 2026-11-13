@@ -1,0 +1,25 @@
+{
+  "source_sha256": {
+    "baselines.py": "cc5704d46da6fc24a0c4b5ab00862d120078e5db23fd139cc20919d2f84ba27d",
+    "config.py": "76ba878238ce68c054d8cd0f5dc66a7d2830759a31afebc4550e06ab03460b3e",
+    "demo.py": "6a0770d447597e68592da08ba30424174b019280a24fc26b79a3b2874cf9fbba",
+    "dqn_agent.py": "7c0099ca8cb7f8e660d972744ddaad3e3baf0d57712fced3d913c8e4e9df2cf2",
+    "environment.py": "69208d8889314b06dcfaff6d3a68b73cc3fb74c45b1fbc4d6716116c5f2c94d7",
+    "evaluate.py": "1e4ab09d8655e9e03dbc12ae0908a6a3f430b69953c60d97eab4d1d28e8126be",
+    "first_offloading_example.py": "60cdf22446a105d479b7b68cb556e7f2fe146fadee868482de880c708e2c6b10",
+    "rl_environment.py": "68967811a36f8cf541c070af9695400eb01f06cefe8ac9d3b110ea0c7c35210f",
+    "train.py": "ed61ce0f8459c5337d6811e9ca59155a93ed72b67544eed76fe5efd1c9378cb5",
+    "tests\\test_learning.py": "5e3d262bd1bc403982cfb7cd775b231cb1ea83ed8d58e1067dd05a671a13a3b3",
+    "requirements.txt": "a88ec0c3dd010f35d41ef59035277856eaef30bad40e011c00459cb926d44270"
+  },
+  "verification": {
+    "unit_tests_passed": 7,
+    "notes": [
+      "terminal and nonterminal target equations",
+      "replay observation copies",
+      "checkpoint round trip",
+      "queue/reset/deadline behavior",
+      "all original baseline results preserved"
+    ]
+  }
+}

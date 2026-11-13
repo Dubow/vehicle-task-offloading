@@ -1,0 +1,27 @@
+{
+  "task_count_per_episode": 100,
+  "arrival_gap_s": 0.2,
+  "test_seed_start": 2000000,
+  "test_seed_end_inclusive": 2000029,
+  "episode_count": 30,
+  "random_policy_seed": "7 + test_seed",
+  "exploration_probability": 0.0,
+  "learning_during_evaluation": false,
+  "checkpoint_selection": "All supplied checkpoints; no test-based selection",
+  "checkpoints": [
+    {
+      "filename": "dqn_seed_17.pt",
+      "sha256": "bcba5a6bbe17180380d212f37f5803ac174ba00aee97da88089eb5b2145e1c36"
+    },
+    {
+      "filename": "dqn_seed_27.pt",
+      "sha256": "e3c9e5ea6f432c4a36725ff34bb98e8b87717a4993a5149373bae0e78d15eb65"
+    },
+    {
+      "filename": "dqn_seed_7.pt",
+      "sha256": "a7a72f8c4fbcfceace37f2fd29e765a1d2313b3fea97efef3d19f914e553abf3"
+    }
+  ],
+  "variability": "Sample standard deviation across episode means, separately for each policy/model. Not a confidence interval.",
+  "scope": "Synthetic tasks; fixed processing capacities; dispatch-order reservations; no separate upload queue or return-data delay."
+}
